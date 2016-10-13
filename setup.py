@@ -6,7 +6,7 @@ setup(
     name='nose-attribute',
     version=VERSION,
     author='Travis Pavek',
-    auther_email='travis.pavek@gmail.com',
+    author_email='travis.pavek@gmail.com',
     keywords=['nose', 'attrib', 'attribute', 'select', 'exclude', 'tag', 'collect'],
     packages=['attribute'],
     url='https://github.com/travispavek/nose-attribute',
