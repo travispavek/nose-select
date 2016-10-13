@@ -1,105 +1,3 @@
-"""Attribute selector plugin.
-
-Oftentimes when testing you will want to select tests based on
-criteria rather then simply by filename. For example, you might want
-to run all tests except for the slow ones. You can do this with the
-Attribute selector plugin by setting attributes on your test methods.
-Here is an example:
-
-.. code-block:: python
-
-    def test_big_download():
-        import urllib
-        # commence slowness...
-
-    test_big_download.slow = 1
-
-Once you've assigned an attribute ``slow = 1`` you can exclude that
-test and all other tests having the slow attribute by running ::
-
-    $ nosetests -a '!slow'
-
-There is also a decorator available for you that will set attributes.
-Here's how to set ``slow=1`` like above with the decorator:
-
-.. code-block:: python
-
-    from nose.plugins.attrib import attr
-    @attr('slow')
-    def test_big_download():
-        import urllib
-        # commence slowness...
-
-And here's how to set an attribute with a specific value:
-
-.. code-block:: python
-
-    from nose.plugins.attrib import attr
-    @attr(speed='slow')
-    def test_big_download():
-        import urllib
-        # commence slowness...
-
-This test could be run with ::
-
-    $ nosetests -a speed=slow
-
-In Python 2.6 and higher, ``@attr`` can be used on a class to set attributes
-on all its test methods at once.  For example:
-
-.. code-block:: python
-
-    from nose.plugins.attrib import attr
-    @attr(speed='slow')
-    class MyTestCase:
-        def test_long_integration(self):
-            pass
-        def test_end_to_end_something(self):
-            pass
-
-Below is a reference to the different syntaxes available.
-
-Simple syntax
--------------
-
-Examples of using the ``-a`` and ``--attr`` options:
-
-* ``nosetests -a status=stable``
-   Only runs tests with attribute "status" having value "stable"
-
-* ``nosetests -a priority=2,status=stable``
-   Runs tests having both attributes and values
-
-* ``nosetests -a priority=2 -a slow``
-   Runs tests that match either attribute
-
-* ``nosetests -a tags=http``
-   If a test's ``tags`` attribute was a list and it contained the value
-   ``http`` then it would be run
-
-* ``nosetests -a slow``
-   Runs tests with the attribute ``slow`` if its value does not equal False
-   (False, [], "", etc...)
-
-* ``nosetests -a '!slow'``
-   Runs tests that do NOT have the attribute ``slow`` or have a ``slow``
-   attribute that is equal to False
-   **NOTE**:
-   if your shell (like bash) interprets '!' as a special character make sure to
-   put single quotes around it.
-
-Expression Evaluation
----------------------
-
-Examples using the ``-A`` and ``--eval-attr`` options:
-
-* ``nosetests -A "not slow"``
-  Evaluates the Python expression "not slow" and runs the test if True
-
-* ``nosetests -A "(priority > 5) and not slow"``
-  Evaluates a complex Python expression and runs the test if True
-
-"""
 import inspect
 import logging
 import os
@@ -107,12 +5,18 @@ import sys
 from inspect import isfunction
 from nose.plugins.base import Plugin
 from nose.util import tolist
-
+from nose.plugins.collect import CollectOnly
+import re
+import json
+import io
 log = logging.getLogger('nose.plugins.attrib')
 compat_24 = sys.version_info >= (2, 4)
 prefix = os.environ.get('NOSE_ATTR_PREFIX', 'tst')
 
-def attr_name(attr):
+def remove_prefix(attr):
+    return re.sub('^%s_' % prefix, '', attr)
+    
+def add_prefix(attr):
     return '%s_%s' % (prefix, attr)
 
 def attr(*args, **kwargs):
@@ -121,9 +25,9 @@ def attr(*args, **kwargs):
     """
     def wrap_ob(ob):
         for name in args:
-            setattr(ob, attr_name(name), True)
+            setattr(ob, add_prefix(name), True)
         for name, value in kwargs.iteritems():
-            setattr(ob, attr_name(name), value)
+            setattr(ob, add_prefix(name), value)
         return ob
     return wrap_ob
 
@@ -150,7 +54,7 @@ class ContextHelper:
         self.cls = cls
 
     def __getitem__(self, name):
-        return get_method_attr(self.method, self.cls, attr_name(name))
+        return get_method_attr(self.method, self.cls, add_prefix(name))
 
 
 class AttributeSelector(Plugin):
@@ -190,13 +94,6 @@ class AttributeSelector(Plugin):
         """
         self.attribs = []
 
-        # add attr prefix if it has been set
-        def attr_name(attr):
-            prefix = os.environ.get('NOSE_ATTR_PREFIX')
-            if prefix is not None:
-                return '%s_%s' % (prefix, attr)
-            return attr
-        
         # handle python eval-expression parameter
         if compat_24 and options.eval_attr:
             eval_attr = tolist(options.eval_attr)
@@ -249,7 +146,7 @@ class AttributeSelector(Plugin):
         for group in self.attribs:
             match = True
             for key, value in group:
-                attr = get_method_attr(method, cls, attr_name(key))
+                attr = get_method_attr(method, cls, add_prefix(key))
                 if callable(value):
                     if not value(key, method, cls):
                         match = False
@@ -296,3 +193,60 @@ class AttributeSelector(Plugin):
         except AttributeError:
             return False
         return self.validateAttrib(method, cls)
+
+
+class AttributeCollector(CollectOnly):
+    """
+    Collect and output test names only, don't run any tests.
+    """
+    name = "attribute-collect"
+    enableOpt = "attribute_collect"
+
+    #def configure(self, option, conf):
+     #  self.attributes = dict()
+    def __init__(self):
+        super(AttributeCollector, self).__init__()
+        self.methods = list()
+        
+    def options(self, parser, env):
+        """Register commandline options.
+        """
+        parser.add_option('--attr-collect',
+                          dest=self.enableOpt,
+                          action='store_true',
+                          help="Enable attr-collect: %s [ATTR_COLLECT]" %
+                          (self.help()))
+
+    def wantMethod(self, method):
+        test = re.compile('^test_\S+')
+        if not test.match(method.__name__):
+            return False
+        self.methods.append(method)
+        return None
+
+    def setOutputStream(self, stream):
+        class NoStream(object):
+            def writeln(self, *arg):
+                pass
+            write = writeln
+        return NoStream()
+    
+    def get_attributes(self, method):
+        tmp = dict()
+        is_attr = re.compile('^%s_\S+' % prefix)
+        # Get method attributes
+        for attribute in filter(is_attr.match, dir(method)):
+            tmp[remove_prefix(attribute)] = getattr(method, attribute)
+
+        # Get class attributes
+        for attribute in filter(is_attr.match, dir(method.im_class)):
+            tmp[remove_prefix(attribute)] = getattr(method.im_class, attribute)
+        return tmp
+
+    def finalize(self, result):
+        cases = dict()
+        name = lambda x: '{}.{}.{}'.format(x.im_class.__module__, x.im_class.__name__, x.__name__)
+        for method in self.methods:
+            cases[name(method)] = self.get_attributes(method)
+        json.dump(cases, sys.stdout, sort_keys=True, indent=4, separators=(',', ': '))
+
