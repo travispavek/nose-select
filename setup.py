@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = 'v0.1.0'
+VERSION = 'v0.1.1'
 
 setup(
     name='nose-attribute',

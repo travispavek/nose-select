@@ -1,1 +1,1 @@
-from plugin import AttributeCollector, AttributeSelector
+from plugin import AttributeCollector, AttributeSelector, attr
