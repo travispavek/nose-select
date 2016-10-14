@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = 'v0.1.1'
+VERSION = 'v0.1.2'
 
 setup(
     name='nose-tags',
