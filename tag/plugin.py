@@ -1,17 +1,16 @@
-import inspect
 import logging
 import os
 import sys
-from inspect import isfunction
 from nose.plugins.base import Plugin
 from nose.util import tolist
 from nose.plugins.collect import CollectOnly
 import re
 import json
 import io
-log = logging.getLogger('nose.plugins.attrib')
+
+log = logging.getLogger('nose.plugins.tag')
 compat_24 = sys.version_info >= (2, 4)
-prefix = os.environ.get('NOSE_ATTR_PREFIX', 'tst')
+prefix = os.environ.get('NOSE_TAG_PREFIX', 'tst')
 
 def remove_prefix(attr):
     return re.sub('^%s_' % prefix, '', attr)
@@ -19,9 +18,9 @@ def remove_prefix(attr):
 def add_prefix(attr):
     return '%s_%s' % (prefix, attr)
 
-def attr(*args, **kwargs):
-    """Decorator that adds attributes to classes or functions
-    for use with the Attribute (-a) plugin.
+def tag(*args, **kwargs):
+    """Decorator that adds tags to classes or functions
+    for use with the Tag (-t) plugin.
     """
     def wrap_ob(ob):
         for name in args:
@@ -30,6 +29,8 @@ def attr(*args, **kwargs):
             setattr(ob, add_prefix(name), value)
         return ob
     return wrap_ob
+
+attr = tag
 
 def get_method_attr(method, cls, attr_name, default = False):
     """Look up an attribute on a method/ function. 
@@ -57,31 +58,32 @@ class ContextHelper:
         return get_method_attr(self.method, self.cls, add_prefix(name))
 
 
-class AttributeSelector(Plugin):
+class TagSelector(Plugin):
     """Selects test cases to be run based on their attributes.
     """
-
+    name = 'tag-selector'
+    
     def __init__(self):
         Plugin.__init__(self)
         self.attribs = []
 
     def options(self, parser, env):
         """Register command line options"""
-        parser.add_option("-a", "--attr",
-                          dest="attr", action="append",
-                          default=env.get('NOSE_ATTR'),
-                          metavar="ATTR",
+        parser.add_option("-t", "--tag",
+                          dest="tag", action="append",
+                          default=env.get('NOSE_TAG'),
+                          metavar="TAG",
                           help="Run only tests that have attributes "
-                          "specified by ATTR [NOSE_ATTR]")
+                          "specified by ATTR [NOSE_TAG]")
         
         # disable in < 2.4: eval can't take needed args
         if compat_24:
-            parser.add_option("-A", "--eval-attr",
-                              dest="eval_attr", metavar="EXPR", action="append",
-                              default=env.get('NOSE_EVAL_ATTR'),
-                              help="Run only tests for whose attributes "
-                              "the Python expression EXPR evaluates "
-                              "to True [NOSE_EVAL_ATTR]")
+            parser.add_option("-T", "--eval-tag",
+                              dest="eval_tag", metavar="TAG_EXPR", action="append",
+                              default=env.get('NOSE_EVAL_TAG'),
+                              help="Run only tests for whose tags "
+                              "the Python expression TAG_EXPR evaluates "
+                              "to True [NOSE_EVAL_TAG]")
 
     def configure(self, options, config):
         """Configure the plugin and system, based on selected options.
@@ -95,23 +97,23 @@ class AttributeSelector(Plugin):
         self.attribs = []
 
         # handle python eval-expression parameter
-        if compat_24 and options.eval_attr:
-            eval_attr = tolist(options.eval_attr)
-            for attr in eval_attr:
+        if compat_24 and options.eval_tag:
+            eval_tag = tolist(options.eval_tag)
+            for tag in eval_tag:
                 # "<python expression>"
                 # -> eval(expr) in attribute context must be True
                 def eval_in_context(expr, obj, cls):
                     return eval(expr, None, ContextHelper(obj, cls))
-                self.attribs.append([(attr, eval_in_context)])
+                self.attribs.append([(tag, eval_in_context)])
 
         # attribute requirements are a comma separated list of
         # 'key=value' pairs
-        if options.attr:
-            std_attr = tolist(options.attr)
-            for attr in std_attr:
+        if options.tag:
+            std_tag = tolist(options.tag)
+            for tag in std_tag:
                 # all attributes within an attribute group must match
-                attr_group = []
-                for attrib in attr.strip().split(","):
+                tag_group = []
+                for attrib in tag.strip().split(","):
                     # don't die on trailing comma
                     if not attrib:
                         continue
@@ -131,12 +133,12 @@ class AttributeSelector(Plugin):
                             # "name"
                             # -> 'bool(obj.name)' must be True
                             value = True
-                    attr_group.append((key, value))
-                self.attribs.append(attr_group)
+                    tag_group.append((key, value))
+                self.attribs.append(tag_group)
         if self.attribs:
             self.enabled = True
 
-    def validateAttrib(self, method, cls = None):
+    def validateTag(self, method, cls = None):
         """Verify whether a method has the required attributes
         The method is considered a match if it matches all attributes
         for any attribute group.
@@ -183,7 +185,7 @@ class AttributeSelector(Plugin):
     def wantFunction(self, function):
         """Accept the function if its attributes match.
         """
-        return self.validateAttrib(function)
+        return self.validateTag(function)
 
     def wantMethod(self, method):
         """Accept the method if its attributes match.
@@ -192,46 +194,49 @@ class AttributeSelector(Plugin):
             cls = method.im_class
         except AttributeError:
             return False
-        return self.validateAttrib(method, cls)
+        return self.validateTag(method, cls)
 
 
-class AttributeCollector(CollectOnly):
+class TagCollector(CollectOnly):
     """
     Collect and output test names only, don't run any tests.
     """
-    name = "attribute-collect"
-    enableOpt = "attribute_collect"
+    name = "tag-collector"
+    enableOpt = "tag_collector"
 
     #def configure(self, option, conf):
      #  self.attributes = dict()
     def __init__(self):
-        super(AttributeCollector, self).__init__()
-        self.methods = list()
+        super(TagCollector, self).__init__()
+        self.cases = dict()
         
     def options(self, parser, env):
         """Register commandline options.
         """
-        parser.add_option('--attr-collect',
+        parser.add_option('--get-tags',
                           dest=self.enableOpt,
                           action='store_true',
-                          help="Enable attr-collect: %s [ATTR_COLLECT]" %
+                          help="Enable get-tags: %s [GET_TAGS]" %
                           (self.help()))
 
-    def wantMethod(self, method):
-        test = re.compile('^test_\S+')
-        if not test.match(method.__name__):
-            return False
-        self.methods.append(method)
-        return None
-
+    def startTest(self, test):
+        is_test = re.compile('^test_\S+')
+        
+        method_name = filter(is_test.match, dir(test))[0]
+        class_name = test.__class__.__name__
+        module_name = test.__module__
+        tags = self.get_tags(getattr(test, method_name))
+        self.cases['{}.{}.{}'.format(module_name, class_name, method_name)] = tags
+        
     def setOutputStream(self, stream):
+        return stream
         class NoStream(object):
             def writeln(self, *arg):
                 pass
             write = writeln
         return NoStream()
     
-    def get_attributes(self, method):
+    def get_tags(self, method):
         tmp = dict()
         is_attr = re.compile('^%s_\S+' % prefix)
         # Get method attributes
@@ -244,9 +249,5 @@ class AttributeCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        cases = dict()
-        name = lambda x: '{}.{}.{}'.format(x.im_class.__module__, x.im_class.__name__, x.__name__)
-        for method in self.methods:
-            cases[name(method)] = self.get_attributes(method)
-        json.dump(cases, sys.stdout, sort_keys=True, indent=4, separators=(',', ': '))
+        json.dump(self.cases, sys.stdout, sort_keys=True, indent=4, separators=(',', ': '))
 

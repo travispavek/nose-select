@@ -3,14 +3,14 @@ from setuptools import setup
 VERSION = 'v0.1.1'
 
 setup(
-    name='nose-attribute',
+    name='nose-tags',
     version=VERSION,
     author='Travis Pavek',
     author_email='travis.pavek@gmail.com',
     keywords=['nose', 'attrib', 'attribute', 'select', 'exclude', 'tag', 'collect'],
-    packages=['attribute'],
-    url='https://github.com/travispavek/nose-attribute',
-    download_url='https://github.com/travispavek/nose-attribute/tarball/%s' % VERSION,
+    packages=['tag'],
+    url='https://github.com/travispavek/nose-tags',
+    download_url='https://github.com/travispavek/nose-tags/tarball/%s' % VERSION,
     install_requires='nose',
     description='A better nose attrib plugin.',
     classifiers=[
@@ -19,7 +19,7 @@ setup(
         "Topic :: Software Development :: Testing",
     ],
     entry_points = {
-        'nose.plugins': ['attrselect = attribute.plugin:AttributeSelector',
-                         'attrcollect = attribute.plugin:AttributeCollector'],
+        'nose.plugins': ['tagselector = tag.plugin:TagSelector',
+                         'tagcollector = tag.plugin:TagCollector'],
     },
 )
