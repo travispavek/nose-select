@@ -1,6 +1,6 @@
-# nose-attribute
+# nose-tag
 
-nose-attribute plugin enhances the existing built-in attrib plugin.
+nose-tag plugin enhances the existing built-in attrib plugin.
 
 Enhancements:
 
