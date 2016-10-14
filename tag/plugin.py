@@ -229,7 +229,6 @@ class TagCollector(CollectOnly):
         self.cases['{}.{}.{}'.format(module_name, class_name, method_name)] = tags
         
     def setOutputStream(self, stream):
-        return stream
         class NoStream(object):
             def writeln(self, *arg):
                 pass
