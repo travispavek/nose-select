@@ -220,15 +220,15 @@ class TagCollector(CollectOnly):
                           (self.help()))
 
     def startTest(self, test):
-        is_test = re.compile('^test_\S+')
-        
-        method_name = filter(is_test.match, dir(test))[0]
-        class_name = test.__class__.__name__
-        module_name = test.__module__
-        tags = self.get_tags(getattr(test, method_name))
-        self.cases['{}.{}.{}'.format(module_name, class_name, method_name)] = tags
-        
+        # get test tags
+        case = test.id()
+        if hasattr(test, 'test'):
+            test = test.test
+        tags = self.get_tags(test)
+        self.cases[case] = tags
+                
     def setOutputStream(self, stream):
+        #TODO let errors pass through
         class NoStream(object):
             def writeln(self, *arg):
                 pass
@@ -243,8 +243,9 @@ class TagCollector(CollectOnly):
             tmp[remove_prefix(attribute)] = getattr(method, attribute)
 
         # Get class attributes
-        for attribute in filter(is_attr.match, dir(method.im_class)):
-            tmp[remove_prefix(attribute)] = getattr(method.im_class, attribute)
+        cls = getattr(method, 'im_class', method.__class__)
+        for attribute in filter(is_attr.match, dir(cls)):
+            tmp[remove_prefix(attribute)] = getattr(cls, attribute)
         return tmp
 
     def finalize(self, result):
