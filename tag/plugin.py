@@ -233,7 +233,7 @@ class MetadataCollector(CollectOnly):
         else:
             self.cases[tid]['desc'] = None
         self.cases[tid]['docs'] = test.__doc__
-        self.caes[tid]['tags'] = self.get_tags(test)
+        self.cases[tid]['tags'] = self.get_tags(test)
                 
     def setOutputStream(self, stream):
         #TODO let errors pass through
