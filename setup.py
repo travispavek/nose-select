@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = 'v0.1.3'
+VERSION = 'v0.2.0'
 
 setup(
     name='nose-tags',
@@ -20,6 +20,6 @@ setup(
     ],
     entry_points = {
         'nose.plugins': ['tagselector = tag.plugin:TagSelector',
-                         'tagcollector = tag.plugin:TagCollector'],
+                         'metadatacollector = tag.plugin:MetadataCollector'],
     },
 )

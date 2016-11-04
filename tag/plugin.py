@@ -197,35 +197,43 @@ class TagSelector(Plugin):
         return self.validateTag(method, cls)
 
 
-class TagCollector(CollectOnly):
+class MetadataCollector(CollectOnly):
     """
-    Collect and output test names only, don't run any tests.
+    Collect and output test metadata only, don't run any tests.
     """
-    name = "tag-collector"
-    enableOpt = "tag_collector"
+    name = "metadata-collector"
+    enableOpt = "metadata_collector"
 
     #def configure(self, option, conf):
      #  self.attributes = dict()
     def __init__(self):
-        super(TagCollector, self).__init__()
+        super(MetadataCollector, self).__init__()
         self.cases = dict()
         
     def options(self, parser, env):
         """Register commandline options.
         """
-        parser.add_option('--get-tags',
+        parser.add_option('--get-metadata',
                           dest=self.enableOpt,
                           action='store_true',
-                          help="Enable get-tags: %s [GET_TAGS]" %
+                          help="Enable get-metadata: %s [GET_METADATA]" %
                           (self.help()))
 
     def startTest(self, test):
-        # get test tags
-        case = test.id()
+        # location of vars is important
+        tid = test.id()
+        self.cases[tid] = dict()
+        self.cases[tid]['addr'] = test.address()
+
         if hasattr(test, 'test'):
             test = test.test
-        tags = self.get_tags(test)
-        self.cases[case] = tags
+
+        if hassattr(test, 'description'):
+            self.cases[tid]['desc'] = test.description
+        else:
+            self.cases[tid]['desc'] = None
+        self.cases[tid]['docs'] = test.__doc__
+        self.caes[tid]['tags'] = self.get_tags(test)
                 
     def setOutputStream(self, stream):
         #TODO let errors pass through
