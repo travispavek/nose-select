@@ -1,1 +1,1 @@
-from plugin import TagCollector, TagSelector, attr, tag
+from plugin import MetadataCollector, TagSelector, attr, tag
