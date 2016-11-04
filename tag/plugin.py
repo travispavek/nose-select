@@ -228,7 +228,7 @@ class MetadataCollector(CollectOnly):
         if hasattr(test, 'test'):
             test = test.test
 
-        if hassattr(test, 'description'):
+        if hasattr(test, 'description'):
             self.cases[tid]['desc'] = test.description
         else:
             self.cases[tid]['desc'] = None
