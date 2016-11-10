@@ -256,7 +256,8 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        if self.outfile:
+        print self.options
+        if False:
             out = open(self.outfile, 'w')
         else:
             out = sys.stdout
