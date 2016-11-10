@@ -215,7 +215,7 @@ class MetadataCollector(CollectOnly):
         """
         parser.add_option('--get-metadata',
                           dest=self.enableOpt,
-                          action='store_true',
+                          action='store',
                           help="Enable get-metadata: %s [GET_METADATA]" %
                           (self.help()))
         
@@ -223,18 +223,19 @@ class MetadataCollector(CollectOnly):
                           action='store',
                           help="Path to json file to store the metadata report in.")
         
-    #def configure(self, options, config):
-    #    self.outfile = options.metadata_file
+    def configure(self, options, config):
+        self.outfile = options.metadata_collector
+        self.enabled = True
         
     def startTest(self, test):
         # location of vars is important
         tid = test.id()
         self.cases[tid] = dict()
-        #self.cases[tid]['addr'] = test.address()
+        self.cases[tid]['addr'] = test.address()
 
         if hasattr(test, 'test'):
             test = test.test
-        self.cases[tid]['addr'] = test.address()
+        #self.cases[tid]['addr'] = test.address()
         if hasattr(test, 'description'):
             self.cases[tid]['desc'] = test.description
         else:
@@ -256,8 +257,7 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        print dir(self.options)
-        if False:
+        if self.outfile:
             out = open(self.outfile, 'w')
         else:
             out = sys.stdout
