@@ -233,11 +233,14 @@ class MetadataCollector(CollectOnly):
         # location of vars is important
         tid = test.id()
         self.cases[tid] = dict()
-        self.cases[tid]['addr'] = test.address()
+        if hasattr(test, 'address'):
+            self.cases[tid]['addr'] = test.address()
+        else:
+            self.cases[tid]['addr'] = None
 
         if hasattr(test, 'test'):
             test = test.test
-        #self.cases[tid]['addr'] = test.address()
+
         if hasattr(test, 'description'):
             self.cases[tid]['desc'] = test.description
         else:
