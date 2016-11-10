@@ -230,11 +230,11 @@ class MetadataCollector(CollectOnly):
         # location of vars is important
         tid = test.id()
         self.cases[tid] = dict()
-        self.cases[tid]['addr'] = test.address()
+        #self.cases[tid]['addr'] = test.address()
 
         if hasattr(test, 'test'):
             test = test.test
-
+        self.cases[tid]['addr'] = test.address()
         if hasattr(test, 'description'):
             self.cases[tid]['desc'] = test.description
         else:
@@ -256,7 +256,7 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        print self.options
+        print dir(self.options)
         if False:
             out = open(self.outfile, 'w')
         else:
