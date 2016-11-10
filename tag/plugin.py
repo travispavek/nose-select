@@ -218,12 +218,25 @@ class MetadataCollector(CollectOnly):
                           action='store_true',
                           help="Enable get-metadata: %s [GET_METADATA]" %
                           (self.help()))
-
+        
+        parser.add_option('--json-file',
+                          action='store',
+                          help="Path to JSON file to store test metadata")
+        
+    def configure(self, options, config):
+        if options.metadata_collector:
+            self.enabled = True
+        self.conf = config
+        self.outfile = options.json_file
+        
     def startTest(self, test):
         # location of vars is important
         tid = test.id()
         self.cases[tid] = dict()
-        self.cases[tid]['addr'] = test.address()
+        if hasattr(test, 'address'):
+            self.cases[tid]['addr'] = test.address()
+        else:
+            self.cases[tid]['addr'] = None
 
         if hasattr(test, 'test'):
             test = test.test
@@ -235,14 +248,6 @@ class MetadataCollector(CollectOnly):
         self.cases[tid]['docs'] = test.__doc__
         self.cases[tid]['tags'] = self.get_tags(test)
                 
-    def setOutputStream(self, stream):
-        #TODO let errors pass through
-        class NoStream(object):
-            def writeln(self, *arg):
-                pass
-            write = writeln
-        return NoStream()
-    
     def get_tags(self, method):
         tmp = dict()
         is_attr = re.compile('^%s_\S+' % prefix)
@@ -257,5 +262,10 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        json.dump(self.cases, sys.stdout, sort_keys=True, indent=4, separators=(',', ': '))
+        if self.outfile:
+            out = open(self.outfile, 'w')
+        else:
+            out = sys.stdout
+
+        json.dump(self.cases, out, sort_keys=True, indent=4, separators=(',', ': '))
 
