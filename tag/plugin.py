@@ -220,8 +220,8 @@ class MetadataCollector(CollectOnly):
                           (self.help()))
         
     def configure(self, options, config):
-        self.outfile = self.options.metadata_collector
-        self.options.metadata_collector = True
+        self.outfile = options.metadata_collector
+        options.metadata_collector = True
         
     def startTest(self, test):
         # location of vars is important
