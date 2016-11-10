@@ -215,7 +215,7 @@ class MetadataCollector(CollectOnly):
         """
         parser.add_option('--get-metadata',
                           dest=self.enableOpt,
-                          action='store_true',
+                          action='store',
                           help="Enable get-metadata: %s [GET_METADATA]" %
                           (self.help()))
 
@@ -235,14 +235,6 @@ class MetadataCollector(CollectOnly):
         self.cases[tid]['docs'] = test.__doc__
         self.cases[tid]['tags'] = self.get_tags(test)
                 
-    def setOutputStream(self, stream):
-        #TODO let errors pass through
-        class NoStream(object):
-            def writeln(self, *arg):
-                pass
-            write = writeln
-        return NoStream()
-    
     def get_tags(self, method):
         tmp = dict()
         is_attr = re.compile('^%s_\S+' % prefix)
@@ -257,5 +249,6 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        json.dump(self.cases, sys.stdout, sort_keys=True, indent=4, separators=(',', ': '))
+        with open(self.args.metadata_collector, 'w') as outfile:
+            json.dump(self.cases, outfile, sort_keys=True, indent=4, separators=(',', ': '))
 
