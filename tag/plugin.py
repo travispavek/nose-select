@@ -218,7 +218,11 @@ class MetadataCollector(CollectOnly):
                           action='store',
                           help="Enable get-metadata: %s [GET_METADATA]" %
                           (self.help()))
-
+        
+    def configure(self, options, config):
+        self.outfile = self.options.metadata_collector
+        self.options.metadata_collector = True
+        
     def startTest(self, test):
         # location of vars is important
         tid = test.id()
@@ -249,6 +253,6 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        with open(self.args.metadata_collector, 'w') as outfile:
+        with open(self.outfile, 'w') as outfile:
             json.dump(self.cases, outfile, sort_keys=True, indent=4, separators=(',', ': '))
 
