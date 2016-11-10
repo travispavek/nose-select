@@ -215,13 +215,16 @@ class MetadataCollector(CollectOnly):
         """
         parser.add_option('--get-metadata',
                           dest=self.enableOpt,
-                          action='store',
+                          action='store_true',
                           help="Enable get-metadata: %s [GET_METADATA]" %
                           (self.help()))
         
+        parser.add_option('--metadata-file',
+                          action='store',
+                          help="Path to json file to store the metadata report in.")
+        
     def configure(self, options, config):
-        self.outfile = options.metadata_collector
-        options.metadata_collector = True
+        self.outfile = options.metadata_file
         
     def startTest(self, test):
         # location of vars is important
@@ -253,6 +256,10 @@ class MetadataCollector(CollectOnly):
         return tmp
 
     def finalize(self, result):
-        with open(self.outfile, 'w') as outfile:
-            json.dump(self.cases, outfile, sort_keys=True, indent=4, separators=(',', ': '))
+        if self.outfile:
+            out = open(self.outfile, 'w')
+        else:
+            out = sys.stdout
+
+        json.dump(self.cases, out, sort_keys=True, indent=4, separators=(',', ': '))
 
