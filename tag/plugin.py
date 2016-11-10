@@ -226,6 +226,7 @@ class MetadataCollector(CollectOnly):
     def configure(self, options, config):
         self.outfile = options.metadata_collector
         self.enabled = True
+        self.conf = config
         
     def startTest(self, test):
         # location of vars is important
