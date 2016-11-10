@@ -220,6 +220,7 @@ class MetadataCollector(CollectOnly):
                           (self.help()))
         
     def configure(self, options, config):
+        print options
         self.outfile = self.options.metadata_collector
         self.options.metadata_collector = True
         
