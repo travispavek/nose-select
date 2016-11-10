@@ -223,8 +223,8 @@ class MetadataCollector(CollectOnly):
                           action='store',
                           help="Path to json file to store the metadata report in.")
         
-    def configure(self, options, config):
-        self.outfile = options.metadata_file
+    #def configure(self, options, config):
+    #    self.outfile = options.metadata_file
         
     def startTest(self, test):
         # location of vars is important
